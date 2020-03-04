@@ -8,8 +8,13 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+
+library(report)
 library(rstanarm)
 library(report)
+library(devtools)
+library(ggplot2
+        )
 library(tidyverse)
 
 load("nes.rda")
@@ -80,14 +85,19 @@ print(summary(fit_3), detail = FALSE, digits = 2)
 But that adds a bunch of junk, including run-off-the-page text. Maybe there are options in something like `print.stanmvreg()` which might be helpful. Has no one bothered to ask on RStudio Community?
 
 ```{r left_over, include=FALSE}
-x %>% 
+newtable <- x %>% 
   select(partyid7, gender, race, real_ideo) %>% 
   mutate(pred_gender = predict(fit_1, x)) %>% 
   mutate(pred_race = predict(fit_2, x)) %>% 
-  mutate(pred_idea = predict(fit_3, x)) %>% 
-  slice(8000:8010) # Interesting rows.
+  mutate(pred_idea = predict(fit_3, x))
+
+#%>% 
+#  slice(8000:8010) # Interesting rows.
 
 # How similar/different are these predictions?
+
+# They look pretty similar with pred_ida being the best, but we're not certain it
+# is doing a good job.
 
 # How do we know if a prediction is good?
 
@@ -95,8 +105,41 @@ x %>%
 
 # Think about penalty functions and decision-making.
 
-
 ```
+
+
+
+```{r ggplot}
+
+# look at relationship between gender, party_id, and prediction
+
+df <- as.data.frame(newtable)
+
+graphic1 <- ggplot(df, aes(pred_gender, partyid7, fill = gender)) +
+  geom_jitter(alpha = .4)
+
+graphic1
+
+graphic2 <- ggplot(df, aes(pred_gender, partyid7, fill = gender)) +
+  geom_boxplot()
+
+graphic2
+
+graphic3 <- ggplot(df, aes(pred_race, partyid7, fill = race)) +
+  geom_boxplot()
+
+graphic3
+
+df2 <- df %>%
+  group_by(real_ideo)
+
+graphic4 <- ggplot(df, aes(group = real_ideo,pred_idea, partyid7, fill = real_ideo)) +
+  geom_boxplot()
+
+graphic4
+```
+
+
 
 
 ```{r}
@@ -104,11 +147,39 @@ x %>%
 # details of the model. And, yes, you will be seeing questions similar to this
 # on the exam!
 
+
+fit_4 <- stan_glm(data = df, partyid7  ~ gender + race + real_ideo, refresh = 0)
+fit_4
+
 # Now fit the model for a single year. The coefficient values are different!
 # Which ones are true?
 
+dfnew <- df %>%
+  mutate(real_ideo1 = real_ideo-1)
+
+fit_5 <- stan_glm(data = dfnew, partyid7  ~ gender + race + real_ideo1, refresh = 0)
+fit_5
+
+
+# goal is to explain what models means
+# if your female voter who's african american, you have an idealogy of zero,
+# even if you have ideaology of 1, and it can't start at zero, you still have
+# the negative. Bc other coefficeints add on so much, it makes sense that it would have to be
+# negative the predicted black ideaology for a female with that idealogy
+# black female with an ideaology is zero. Would have change in intercept and scale,
+# but not in the magnitude. Slope stayed the same, but it changed range.
+# Their party id is now 1 what we are calling 1
+
+
+
+
+
+
 # Let's do as ROAS does and fit the model for each year. Recall all your
 # list-column tricks from Gov 1005.
+
+
+
 
 # Once we have that collection of models. Can we make a plot which looks like at
 # least one of the panes from page 142?
